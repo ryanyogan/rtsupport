@@ -3,6 +3,7 @@ import ChannelSection from './channels/ChannelSection';
 import './App.css';
 import MessageSection from './messages/MessageSection';
 import UserSection from './users/UserSection';
+import Socket from '../lib/socket';
 
 class App extends Component {
   state = {
@@ -14,66 +15,73 @@ class App extends Component {
   };
 
   componentDidMount() {
-    const ws = (this.ws = new WebSocket('ws://echo.websocket.org'));
-    ws.onmessage = this.message;
-    ws.onopen = this.open;
-    ws.onclose = this.close;
+    const socket = (this.socket = new Socket());
+    socket.on('connect', this.onConnect);
+    socket.on('disconnect', this.onDisconnect);
+    socket.on('channel add', this.onAddChannel);
+    socket.on('user add', this.onAddUser);
+    socket.on('user edit', this.onEditUser);
+    socket.on('user remove', this.onRemoveUser);
+    socket.on('message add', this.onMessageAdd);
   }
 
-  setChannel = activeChannel => this.setState({ activeChannel });
+  onConnect = () => {
+    this.setState({ connected: true });
+    this.socket.emit('channel subscribe');
+    this.socket.emit('user subscribe');
+  };
 
-  setUserName = name => {
+  onDisconnect = () => this.setState({ connected: false });
+
+  onAddChannel = channel => {
+    const { channels } = this.state;
+    channels.push(channel);
+    this.setState({ channels });
+  };
+
+  onAddUser = user => {
     const { users } = this.state;
-    users.push({ id: users.length, name });
+    users.push(user);
     this.setState({ users });
   };
 
-  message = e => {
-    const event = JSON.parse(e.data);
-
-    switch (event.name) {
-      case 'channel add':
-        return this.newChannel(event.data);
-      default:
-        return null;
-    }
+  onEditUser = editUser => {
+    const { currentUsers } = this.state;
+    const users = currentUsers.map(user => {
+      if (editUser.id === user.id) {
+        return editUser;
+      }
+      return user;
+    });
+    this.setState({ users });
   };
 
-  open = () => {
-    this.setState({ connected: true });
+  onRemoveUser = removeUser => {
+    const { currentUsers } = this.state;
+    const users = currentUsers.filter(user => user.id !== removeUser.id);
+    this.setState({ users });
   };
 
-  close = () => {
-    this.setState({ connected: false });
-  };
-
-  addMessage = body => {
-    const { messages, users } = this.state;
-    const createdAt = new Date();
-    const author = users.length > 0 ? users[0].name : 'anonymous';
-    messages.push({ id: messages.length, body, createdAt, author });
+  onMessageAdd = message => {
+    const { messages } = this.state;
+    messages.push(message);
     this.setState({ messages });
   };
 
-  addChannel = name => {
-    const { channels } = this.state;
-
-    // Temp message to echo
-    const msg = JSON.stringify({
-      name: 'channel add',
-      data: {
-        id: channels.length,
-        name,
-      },
-    });
-
-    this.ws.send(msg);
+  setChannel = activeChannel => {
+    this.setState({ activeChannel });
+    this.socket.emit('message unsubscribe');
+    this.setState({ messages: [] });
+    this.socket.emit('message subscribe', { channelId: activeChannel.id });
   };
 
-  newChannel = channel => {
-    const { channels } = this.state;
-    channels.push(channel);
-    this.setChannel({ channels });
+  setUserName = name => this.socket.emit('user edit', { name });
+
+  addChannel = name => this.socket.emit('channel add', { name });
+
+  addMessage = body => {
+    const { activeChannel } = this.state;
+    this.socket.emit('message add', { channelId: activeChannel.id, body });
   };
 
   render() {
