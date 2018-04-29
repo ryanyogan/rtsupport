@@ -10,6 +10,12 @@
     "react-dom": "^16.3.2",
     "react-scripts": "1.1.4"
   },
+  "jest": {
+    "globals": {
+      "__DEV__": true,
+      "WebSocket": true
+    }
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
