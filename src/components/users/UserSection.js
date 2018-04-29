@@ -5,7 +5,7 @@ import UserForm from './UserForm';
 const UserSection = ({ ...props }) => (
   <div className="support panel panel-primary">
     <div className="panel-heading">
-      <storng>Users</storng>
+      <strong>Users</strong>
     </div>
     <div className="panel-body users">
       <UserList {...props} />
