@@ -22,9 +22,11 @@ class App extends Component {
   };
 
   addMessage = body => {
-    const { messages } = this.state;
-    messages.push({ id: messages.length, body });
-    this.setChannel({ messages });
+    const { messages, users } = this.state;
+    const createdAt = new Date();
+    const author = users.length > 0 ? users[0].name : 'anonymous';
+    messages.push({ id: messages.length, body, createdAt, author });
+    this.setState({ messages });
   };
 
   addChannel = name => {
